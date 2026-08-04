@@ -2566,3 +2566,456 @@ KeyboardInterrupt
 2026-08-03 17:20:14,638 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
 2026-08-03 17:20:15,688 | INFO     | services.camera_manager | Camera released.
 2026-08-03 17:20:15,947 | INFO     | __main__ | Smart Attendance System shut down normally.
+2026-08-04 12:30:24,772 | INFO     | __main__ | Smart Attendance System starting up.
+2026-08-04 12:30:24,773 | INFO     | utils.bootstrap | Created missing directory: C:\Users\HP\OneDrive\Documents\Desktop\VAYUROME Working\VS Code\VAS Attendance System + hardware\smart_attendance_system\attendance
+2026-08-04 12:30:24,774 | INFO     | utils.bootstrap | Directory bootstrap complete. 6 directories verified.
+2026-08-04 12:30:34,579 | INFO     | services.database_manager | Database schema verified/created at C:\Users\HP\OneDrive\Documents\Desktop\VAYUROME Working\VS Code\VAS Attendance System + hardware\smart_attendance_system\database\employee_data.db
+2026-08-04 12:30:43,260 | INFO     | services.auth_manager | Admin login successful: admin
+2026-08-04 12:30:43,442 | INFO     | services.database_manager | Database schema verified/created at C:\Users\HP\OneDrive\Documents\Desktop\VAYUROME Working\VS Code\VAS Attendance System + hardware\smart_attendance_system\database\employee_data.db
+2026-08-04 12:30:43,498 | INFO     | services.encoding_cache | Loaded encoding cache: 2 employee(s), 3 total encoding(s).
+2026-08-04 12:30:52,982 | INFO     | services.camera_manager | Camera opened (backend=OpenCVWebcamSource, 1280x720)
+2026-08-04 12:30:53,730 | ERROR    | __main__ | Unhandled exception in DashboardApp - application exiting.
+Traceback (most recent call last):
+  File "C:\Users\HP\OneDrive\Documents\Desktop\VAYUROME Working\VS Code\VAS Attendance System + hardware\smart_attendance_system\main.py", line 51, in on_login_success
+    app = DashboardApp(auth=auth)
+          ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Documents\Desktop\VAYUROME Working\VS Code\VAS Attendance System + hardware\smart_attendance_system\gui\dashboard.py", line 97, in __init__
+    self._start_camera_loop()
+  File "C:\Users\HP\OneDrive\Documents\Desktop\VAYUROME Working\VS Code\VAS Attendance System + hardware\smart_attendance_system\gui\dashboard.py", line 213, in _start_camera_loop
+    self._camera_tick()
+  File "C:\Users\HP\OneDrive\Documents\Desktop\VAYUROME Working\VS Code\VAS Attendance System + hardware\smart_attendance_system\gui\dashboard.py", line 267, in _camera_tick
+    results = self.face_engine.recognize_frame(frame)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Documents\Desktop\VAYUROME Working\VS Code\VAS Attendance System + hardware\smart_attendance_system\services\face_recognition_engine.py", line 239, in recognize_frame
+    for location, encoding in self.detect_and_encode_frame(frame):
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Documents\Desktop\VAYUROME Working\VS Code\VAS Attendance System + hardware\smart_attendance_system\services\face_recognition_engine.py", line 182, in detect_and_encode_frame
+    encodings = safe_face_encodings(
+                ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Documents\Desktop\VAYUROME Working\VS Code\VAS Attendance System + hardware\smart_attendance_system\services\dlib_compat.py", line 185, in safe_face_encodings
+    return face_recognition.face_encodings(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Documents\Desktop\VAYUROME Working\VS Code\VAS Attendance System + hardware\smart_attendance_system\venv\Lib\site-packages\face_recognition\api.py", line 214, in face_encodings
+    return [np.array(face_encoder.compute_face_descriptor(face_image, raw_landmark_set, num_jitters)) for raw_landmark_set in raw_landmarks]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Documents\Desktop\VAYUROME Working\VS Code\VAS Attendance System + hardware\smart_attendance_system\venv\Lib\site-packages\face_recognition\api.py", line 214, in <listcomp>
+    return [np.array(face_encoder.compute_face_descriptor(face_image, raw_landmark_set, num_jitters)) for raw_landmark_set in raw_landmarks]
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: compute_face_descriptor(): incompatible function arguments. The following argument types are supported:
+    1. (self: _dlib_pybind11.face_recognition_model_v1, img: numpy.ndarray[(rows,cols,3),numpy.uint8], face: _dlib_pybind11.full_object_detection, num_jitters: int = 0, padding: float = 0.25) -> _dlib_pybind11.vector
+    2. (self: _dlib_pybind11.face_recognition_model_v1, img: numpy.ndarray[(rows,cols,3),numpy.uint8], num_jitters: int = 0) -> _dlib_pybind11.vector
+    3. (self: _dlib_pybind11.face_recognition_model_v1, img: numpy.ndarray[(rows,cols,3),numpy.uint8], faces: _dlib_pybind11.full_object_detections, num_jitters: int = 0, padding: float = 0.25) -> _dlib_pybind11.vectors
+    4. (self: _dlib_pybind11.face_recognition_model_v1, batch_img: list[numpy.ndarray[(rows,cols,3),numpy.uint8]], batch_faces: list[_dlib_pybind11.full_object_detections], num_jitters: int = 0, padding: float = 0.25) -> _dlib_pybind11.vectorss
+    5. (self: _dlib_pybind11.face_recognition_model_v1, batch_img: list[numpy.ndarray[(rows,cols,3),numpy.uint8]], num_jitters: int = 0) -> _dlib_pybind11.vectors
+
+Invoked with: <_dlib_pybind11.face_recognition_model_v1 object at 0x000001B6217570F0>, array([[[161, 196, 167],
+        [158, 192, 171],
+        [153, 186, 167],
+        ...,
+        [187, 249, 230],
+        [190, 252, 231],
+        [189, 251, 228]],
+
+       [[157, 197, 168],
+        [158, 193, 172],
+        [152, 184, 164],
+        ...,
+        [194, 254, 234],
+        [195, 254, 233],
+        [194, 252, 228]],
+
+       [[163, 198, 171],
+        [162, 196, 169],
+        [158, 190, 171],
+        ...,
+        [196, 254, 235],
+        [197, 254, 235],
+        [193, 250, 226]],
+
+       ...,
+
+       [[ 22,  32,  24],
+        [ 23,  30,  26],
+        [ 28,  34,  30],
+        ...,
+        [ 34,  41,  20],
+        [ 39,  45,  23],
+        [ 31,  44,  11]],
+
+       [[ 25,  33,  24],
+        [ 22,  30,  24],
+        [ 36,  43,  32],
+        ...,
+        [ 32,  42,  20],
+        [ 30,  42,  19],
+        [ 32,  44,  19]],
+
+       [[ 22,  32,  27],
+        [ 21,  30,  25],
+        [ 21,  31,  20],
+        ...,
+        [ 33,  43,  24],
+        [ 30,  43,  25],
+        [ 32,  43,  21]]], dtype=uint8), <_dlib_pybind11.full_object_detection object at 0x000001B621D870B0>, 1
+2026-08-04 12:39:16,666 | INFO     | __main__ | Smart Attendance System starting up.
+2026-08-04 12:39:16,667 | INFO     | utils.bootstrap | Directory bootstrap complete. 6 directories verified.
+2026-08-04 12:39:29,438 | INFO     | services.database_manager | Database schema verified/created at C:\Users\HP\OneDrive\Documents\Desktop\VAYUROME Working\VS Code\VAS Attendance System + hardware\smart_attendance_system\database\employee_data.db
+2026-08-04 12:39:38,699 | INFO     | services.auth_manager | Admin login successful: admin
+2026-08-04 12:39:38,800 | INFO     | services.database_manager | Database schema verified/created at C:\Users\HP\OneDrive\Documents\Desktop\VAYUROME Working\VS Code\VAS Attendance System + hardware\smart_attendance_system\database\employee_data.db
+2026-08-04 12:39:38,802 | INFO     | services.encoding_cache | Loaded encoding cache: 2 employee(s), 3 total encoding(s).
+2026-08-04 12:39:48,329 | INFO     | services.camera_manager | Camera opened (backend=OpenCVWebcamSource, 1280x720)
+2026-08-04 12:39:49,556 | ERROR    | gui.dashboard | Unhandled exception in GUI callback: compute_face_descriptor(): incompatible function arguments. The following argument types are supported:
+    1. (self: _dlib_pybind11.face_recognition_model_v1, img: numpy.ndarray[(rows,cols,3),numpy.uint8], face: _dlib_pybind11.full_object_detection, num_jitters: int = 0, padding: float = 0.25) -> _dlib_pybind11.vector
+    2. (self: _dlib_pybind11.face_recognition_model_v1, img: numpy.ndarray[(rows,cols,3),numpy.uint8], num_jitters: int = 0) -> _dlib_pybind11.vector
+    3. (self: _dlib_pybind11.face_recognition_model_v1, img: numpy.ndarray[(rows,cols,3),numpy.uint8], faces: _dlib_pybind11.full_object_detections, num_jitters: int = 0, padding: float = 0.25) -> _dlib_pybind11.vectors
+    4. (self: _dlib_pybind11.face_recognition_model_v1, batch_img: list[numpy.ndarray[(rows,cols,3),numpy.uint8]], batch_faces: list[_dlib_pybind11.full_object_detections], num_jitters: int = 0, padding: float = 0.25) -> _dlib_pybind11.vectorss
+    5. (self: _dlib_pybind11.face_recognition_model_v1, batch_img: list[numpy.ndarray[(rows,cols,3),numpy.uint8]], num_jitters: int = 0) -> _dlib_pybind11.vectors
+
+Invoked with: <_dlib_pybind11.face_recognition_model_v1 object at 0x000002B6F1A7DFF0>, array([[[ 73,  97, 113],
+        [ 77,  86, 102],
+        [167, 168, 159],
+        ...,
+        [115, 139, 145],
+        [118, 141, 146],
+        [142, 165, 165]],
+
+       [[ 81,  96, 114],
+        [ 83,  99, 105],
+        [184, 184, 181],
+        ...,
+        [126, 149, 151],
+        [144, 168, 170],
+        [195, 224, 224]],
+
+       [[ 79,  97, 105],
+        [ 87, 100,  98],
+        [198, 199, 193],
+        ...,
+        [143, 162, 167],
+        [219, 243, 244],
+        [227, 252, 247]],
+
+       ...,
+
+       [[ 26,  27,  24],
+        [ 29,  29,  29],
+        [ 25,  25,  25],
+        ...,
+        [ 45,  40,  27],
+        [ 46,  40,  24],
+        [ 44,  39,  25]],
+
+       [[ 33,  29,  28],
+        [ 20,  21,  20],
+        [ 28,  27,  27],
+        ...,
+        [ 46,  39,  25],
+        [ 45,  40,  26],
+        [ 47,  43,  29]],
+
+       [[ 38,  31,  28],
+        [ 22,  24,  24],
+        [ 26,  26,  25],
+        ...,
+        [ 47,  40,  29],
+        [ 45,  41,  29],
+        [ 44,  41,  25]]], dtype=uint8), <_dlib_pybind11.full_object_detection object at 0x000002B6FB7689F0>, 1
+Traceback (most recent call last):
+  File "C:\Users\HP\AppData\Local\Programs\Python\Python311\Lib\tkinter\__init__.py", line 1967, in __call__
+    return self.func(*args)
+           ^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\AppData\Local\Programs\Python\Python311\Lib\tkinter\__init__.py", line 861, in callit
+    func(*args)
+  File "C:\Users\HP\OneDrive\Documents\Desktop\VAYUROME Working\VS Code\VAS Attendance System + hardware\smart_attendance_system\gui\dashboard.py", line 267, in _camera_tick
+    results = self.face_engine.recognize_frame(frame)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Documents\Desktop\VAYUROME Working\VS Code\VAS Attendance System + hardware\smart_attendance_system\services\face_recognition_engine.py", line 239, in recognize_frame
+    for location, encoding in self.detect_and_encode_frame(frame):
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Documents\Desktop\VAYUROME Working\VS Code\VAS Attendance System + hardware\smart_attendance_system\services\face_recognition_engine.py", line 182, in detect_and_encode_frame
+    encodings = safe_face_encodings(
+                ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Documents\Desktop\VAYUROME Working\VS Code\VAS Attendance System + hardware\smart_attendance_system\services\dlib_compat.py", line 185, in safe_face_encodings
+    return face_recognition.face_encodings(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Documents\Desktop\VAYUROME Working\VS Code\VAS Attendance System + hardware\smart_attendance_system\venv\Lib\site-packages\face_recognition\api.py", line 214, in face_encodings
+    return [np.array(face_encoder.compute_face_descriptor(face_image, raw_landmark_set, num_jitters)) for raw_landmark_set in raw_landmarks]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Documents\Desktop\VAYUROME Working\VS Code\VAS Attendance System + hardware\smart_attendance_system\venv\Lib\site-packages\face_recognition\api.py", line 214, in <listcomp>
+    return [np.array(face_encoder.compute_face_descriptor(face_image, raw_landmark_set, num_jitters)) for raw_landmark_set in raw_landmarks]
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: compute_face_descriptor(): incompatible function arguments. The following argument types are supported:
+    1. (self: _dlib_pybind11.face_recognition_model_v1, img: numpy.ndarray[(rows,cols,3),numpy.uint8], face: _dlib_pybind11.full_object_detection, num_jitters: int = 0, padding: float = 0.25) -> _dlib_pybind11.vector
+    2. (self: _dlib_pybind11.face_recognition_model_v1, img: numpy.ndarray[(rows,cols,3),numpy.uint8], num_jitters: int = 0) -> _dlib_pybind11.vector
+    3. (self: _dlib_pybind11.face_recognition_model_v1, img: numpy.ndarray[(rows,cols,3),numpy.uint8], faces: _dlib_pybind11.full_object_detections, num_jitters: int = 0, padding: float = 0.25) -> _dlib_pybind11.vectors
+    4. (self: _dlib_pybind11.face_recognition_model_v1, batch_img: list[numpy.ndarray[(rows,cols,3),numpy.uint8]], batch_faces: list[_dlib_pybind11.full_object_detections], num_jitters: int = 0, padding: float = 0.25) -> _dlib_pybind11.vectorss
+    5. (self: _dlib_pybind11.face_recognition_model_v1, batch_img: list[numpy.ndarray[(rows,cols,3),numpy.uint8]], num_jitters: int = 0) -> _dlib_pybind11.vectors
+
+Invoked with: <_dlib_pybind11.face_recognition_model_v1 object at 0x000002B6F1A7DFF0>, array([[[ 73,  97, 113],
+        [ 77,  86, 102],
+        [167, 168, 159],
+        ...,
+        [115, 139, 145],
+        [118, 141, 146],
+        [142, 165, 165]],
+
+       [[ 81,  96, 114],
+        [ 83,  99, 105],
+        [184, 184, 181],
+        ...,
+        [126, 149, 151],
+        [144, 168, 170],
+        [195, 224, 224]],
+
+       [[ 79,  97, 105],
+        [ 87, 100,  98],
+        [198, 199, 193],
+        ...,
+        [143, 162, 167],
+        [219, 243, 244],
+        [227, 252, 247]],
+
+       ...,
+
+       [[ 26,  27,  24],
+        [ 29,  29,  29],
+        [ 25,  25,  25],
+        ...,
+        [ 45,  40,  27],
+        [ 46,  40,  24],
+        [ 44,  39,  25]],
+
+       [[ 33,  29,  28],
+        [ 20,  21,  20],
+        [ 28,  27,  27],
+        ...,
+        [ 46,  39,  25],
+        [ 45,  40,  26],
+        [ 47,  43,  29]],
+
+       [[ 38,  31,  28],
+        [ 22,  24,  24],
+        [ 26,  26,  25],
+        ...,
+        [ 47,  40,  29],
+        [ 45,  41,  29],
+        [ 44,  41,  25]]], dtype=uint8), <_dlib_pybind11.full_object_detection object at 0x000002B6FB7689F0>, 1
+2026-08-04 12:39:49,564 | INFO     | services.notification_manager | [system/error] Unexpected error: compute_face_descriptor(): incompatible function arguments. The following argument types are supported:
+    1. (self: _dlib_pybind11.face_recognition_model_v1, img: numpy.ndarray[(rows,cols,3),numpy.uint8], face: _dlib_pybind11.full_object_detection, num_jitters: int = 0, padding: float = 0.25) -> _dlib_pybind11.vector
+    2. (self: _dlib_pybind11.face_recognition_model_v1, img: numpy.ndarray[(rows,cols,3),numpy.uint8], num_jitters: int = 0) -> _dlib_pybind11.vector
+    3. (self: _dlib_pybind11.face_recognition_model_v1, img: numpy.ndarray[(rows,cols,3),numpy.uint8], faces: _dlib_pybind11.full_object_detections, num_jitters: int = 0, padding: float = 0.25) -> _dlib_pybind11.vectors
+    4. (self: _dlib_pybind11.face_recognition_model_v1, batch_img: list[numpy.ndarray[(rows,cols,3),numpy.uint8]], batch_faces: list[_dlib_pybind11.full_object_detections], num_jitters: int = 0, padding: float = 0.25) -> _dlib_pybind11.vectorss
+    5. (self: _dlib_pybind11.face_recognition_model_v1, batch_img: list[numpy.ndarray[(rows,cols,3),numpy.uint8]], num_jitters: int = 0) -> _dlib_pybind11.vectors
+
+Invoked with: <_dlib_pybind11.face_recognition_model_v1 object at 0x000002B6F1A7DFF0>, array([[[ 73,  97, 113],
+        [ 77,  86, 102],
+        [167, 168, 159],
+        ...,
+        [115, 139, 145],
+        [118, 141, 146],
+        [142, 165, 165]],
+
+       [[ 81,  96, 114],
+        [ 83,  99, 105],
+        [184, 184, 181],
+        ...,
+        [126, 149, 151],
+        [144, 168, 170],
+        [195, 224, 224]],
+
+       [[ 79,  97, 105],
+        [ 87, 100,  98],
+        [198, 199, 193],
+        ...,
+        [143, 162, 167],
+        [219, 243, 244],
+        [227, 252, 247]],
+
+       ...,
+
+       [[ 26,  27,  24],
+        [ 29,  29,  29],
+        [ 25,  25,  25],
+        ...,
+        [ 45,  40,  27],
+        [ 46,  40,  24],
+        [ 44,  39,  25]],
+
+       [[ 33,  29,  28],
+        [ 20,  21,  20],
+        [ 28,  27,  27],
+        ...,
+        [ 46,  39,  25],
+        [ 45,  40,  26],
+        [ 47,  43,  29]],
+
+       [[ 38,  31,  28],
+        [ 22,  24,  24],
+        [ 26,  26,  25],
+        ...,
+        [ 47,  40,  29],
+        [ 45,  41,  29],
+        [ 44,  41,  25]]], dtype=uint8), <_dlib_pybind11.full_object_detection object at 0x000002B6FB7689F0>, 1
+2026-08-04 12:39:56,730 | INFO     | services.camera_manager | Camera released.
+2026-08-04 12:39:57,044 | INFO     | __main__ | Smart Attendance System shut down normally.
+2026-08-04 12:41:49,148 | INFO     | __main__ | Smart Attendance System starting up.
+2026-08-04 12:41:49,150 | INFO     | utils.bootstrap | Directory bootstrap complete. 6 directories verified.
+2026-08-04 12:41:52,750 | INFO     | services.database_manager | Database schema verified/created at C:\Users\HP\OneDrive\Documents\Desktop\VAYUROME Working\VS Code\VAS Attendance System + hardware\smart_attendance_system\database\employee_data.db
+2026-08-04 12:42:03,264 | INFO     | services.auth_manager | Admin login successful: admin
+2026-08-04 12:42:03,393 | INFO     | services.database_manager | Database schema verified/created at C:\Users\HP\OneDrive\Documents\Desktop\VAYUROME Working\VS Code\VAS Attendance System + hardware\smart_attendance_system\database\employee_data.db
+2026-08-04 12:42:03,395 | INFO     | services.encoding_cache | Loaded encoding cache: 2 employee(s), 3 total encoding(s).
+2026-08-04 12:42:12,046 | INFO     | services.camera_manager | Camera opened (backend=OpenCVWebcamSource, 1280x720)
+2026-08-04 12:42:12,652 | ERROR    | __main__ | Unhandled exception in DashboardApp - application exiting.
+Traceback (most recent call last):
+  File "C:\Users\HP\OneDrive\Documents\Desktop\VAYUROME Working\VS Code\VAS Attendance System + hardware\smart_attendance_system\main.py", line 51, in on_login_success
+    app = DashboardApp(auth=auth)
+          ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Documents\Desktop\VAYUROME Working\VS Code\VAS Attendance System + hardware\smart_attendance_system\gui\dashboard.py", line 97, in __init__
+    self._start_camera_loop()
+  File "C:\Users\HP\OneDrive\Documents\Desktop\VAYUROME Working\VS Code\VAS Attendance System + hardware\smart_attendance_system\gui\dashboard.py", line 213, in _start_camera_loop
+    self._camera_tick()
+  File "C:\Users\HP\OneDrive\Documents\Desktop\VAYUROME Working\VS Code\VAS Attendance System + hardware\smart_attendance_system\gui\dashboard.py", line 267, in _camera_tick
+    results = self.face_engine.recognize_frame(frame)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Documents\Desktop\VAYUROME Working\VS Code\VAS Attendance System + hardware\smart_attendance_system\services\face_recognition_engine.py", line 239, in recognize_frame
+    for location, encoding in self.detect_and_encode_frame(frame):
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Documents\Desktop\VAYUROME Working\VS Code\VAS Attendance System + hardware\smart_attendance_system\services\face_recognition_engine.py", line 182, in detect_and_encode_frame
+    encodings = safe_face_encodings(
+                ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Documents\Desktop\VAYUROME Working\VS Code\VAS Attendance System + hardware\smart_attendance_system\services\dlib_compat.py", line 185, in safe_face_encodings
+    return face_recognition.face_encodings(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Documents\Desktop\VAYUROME Working\VS Code\VAS Attendance System + hardware\smart_attendance_system\venv\Lib\site-packages\face_recognition\api.py", line 214, in face_encodings
+    return [np.array(face_encoder.compute_face_descriptor(face_image, raw_landmark_set, num_jitters)) for raw_landmark_set in raw_landmarks]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\OneDrive\Documents\Desktop\VAYUROME Working\VS Code\VAS Attendance System + hardware\smart_attendance_system\venv\Lib\site-packages\face_recognition\api.py", line 214, in <listcomp>
+    return [np.array(face_encoder.compute_face_descriptor(face_image, raw_landmark_set, num_jitters)) for raw_landmark_set in raw_landmarks]
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: compute_face_descriptor(): incompatible function arguments. The following argument types are supported:
+    1. (self: _dlib_pybind11.face_recognition_model_v1, img: numpy.ndarray[(rows,cols,3),numpy.uint8], face: _dlib_pybind11.full_object_detection, num_jitters: int = 0, padding: float = 0.25) -> _dlib_pybind11.vector
+    2. (self: _dlib_pybind11.face_recognition_model_v1, img: numpy.ndarray[(rows,cols,3),numpy.uint8], num_jitters: int = 0) -> _dlib_pybind11.vector
+    3. (self: _dlib_pybind11.face_recognition_model_v1, img: numpy.ndarray[(rows,cols,3),numpy.uint8], faces: _dlib_pybind11.full_object_detections, num_jitters: int = 0, padding: float = 0.25) -> _dlib_pybind11.vectors
+    4. (self: _dlib_pybind11.face_recognition_model_v1, batch_img: list[numpy.ndarray[(rows,cols,3),numpy.uint8]], batch_faces: list[_dlib_pybind11.full_object_detections], num_jitters: int = 0, padding: float = 0.25) -> _dlib_pybind11.vectorss
+    5. (self: _dlib_pybind11.face_recognition_model_v1, batch_img: list[numpy.ndarray[(rows,cols,3),numpy.uint8]], num_jitters: int = 0) -> _dlib_pybind11.vectors
+
+Invoked with: <_dlib_pybind11.face_recognition_model_v1 object at 0x000002D5A55984F0>, array([[[239, 244, 241],
+        [237, 246, 237],
+        [235, 244, 239],
+        ...,
+        [169, 189, 196],
+        [172, 189, 196],
+        [156, 171, 174]],
+
+       [[234, 243, 240],
+        [235, 244, 241],
+        [234, 243, 242],
+        ...,
+        [173, 189, 187],
+        [149, 165, 163],
+        [129, 143, 148]],
+
+       [[236, 245, 242],
+        [236, 245, 242],
+        [235, 245, 238],
+        ...,
+        [153, 170, 165],
+        [116, 132, 134],
+        [120, 136, 140]],
+
+       ...,
+
+       [[ 28,  23,  19],
+        [ 28,  22,  19],
+        [ 32,  23,  18],
+        ...,
+        [ 42,  39,  20],
+        [ 38,  41,  23],
+        [ 37,  41,  21]],
+
+       [[ 23,  16,  10],
+        [ 23,  21,  14],
+        [ 23,  23,  15],
+        ...,
+        [ 42,  37,  18],
+        [ 37,  40,  17],
+        [ 36,  39,  19]],
+
+       [[ 22,  20,  15],
+        [ 21,  21,  13],
+        [ 25,  27,  16],
+        ...,
+        [ 38,  36,  21],
+        [ 37,  38,  24],
+        [ 37,  38,  26]]], dtype=uint8), <_dlib_pybind11.full_object_detection object at 0x000002D5AEF6F0B0>, 1
+2026-08-04 12:51:32,862 | INFO     | __main__ | Smart Attendance System starting up.
+2026-08-04 12:51:32,864 | INFO     | utils.bootstrap | Directory bootstrap complete. 6 directories verified.
+2026-08-04 12:51:36,668 | INFO     | services.database_manager | Database schema verified/created at C:\Users\HP\OneDrive\Documents\Desktop\VAYUROME Working\VS Code\VAS Attendance System + hardware\smart_attendance_system\database\employee_data.db
+2026-08-04 12:51:46,289 | INFO     | services.auth_manager | Admin login successful: admin
+2026-08-04 12:51:46,433 | INFO     | services.database_manager | Database schema verified/created at C:\Users\HP\OneDrive\Documents\Desktop\VAYUROME Working\VS Code\VAS Attendance System + hardware\smart_attendance_system\database\employee_data.db
+2026-08-04 12:51:46,436 | INFO     | services.encoding_cache | Loaded encoding cache: 2 employee(s), 3 total encoding(s).
+2026-08-04 12:51:57,270 | INFO     | services.camera_manager | Camera opened (backend=OpenCVWebcamSource, 1280x720)
+2026-08-04 12:51:58,356 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:51:58,870 | WARNING  | services.dlib_compat | dlib compatibility shim: compute_face_descriptor() required call pattern 'positional_jitters' instead of face_recognition's default. This means your installed dlib version has a different API than face_recognition 1.3.0 expects - requirements.txt pins dlib<20.0.0 to avoid this; consider reinstalling with `pip install "dlib<20.0.0"` when convenient.
+2026-08-04 12:51:58,943 | INFO     | services.attendance_manager | IN marked: Harsh Kapoor (VAS2026SDE01) at 12:51:58 PM
+2026-08-04 12:51:58,944 | INFO     | services.notification_manager | [attendance/success] Attendance: Harsh Kapoor - IN 12:51:58 PM
+2026-08-04 12:51:59,484 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:00,069 | INFO     | services.attendance_manager | OUT marked: Harsh Kapoor (VAS2026SDE01) at 12:52:00 PM
+2026-08-04 12:52:00,070 | INFO     | services.notification_manager | [attendance/success] Attendance: Harsh Kapoor - OUT 12:52:00 PM
+2026-08-04 12:52:00,217 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:00,789 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:01,538 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:02,159 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:02,765 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:03,277 | INFO     | services.notification_manager | [unknown_face/warning] Unknown person detected by camera.
+2026-08-04 12:52:03,407 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:05,135 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:05,782 | INFO     | services.notification_manager | [unknown_face/warning] Unknown person detected by camera.
+2026-08-04 12:52:05,883 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:06,571 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:07,147 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:07,664 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:08,409 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:09,102 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:09,671 | INFO     | services.notification_manager | [unknown_face/warning] Unknown person detected by camera.
+2026-08-04 12:52:09,801 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:10,672 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:11,301 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:11,900 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:12,453 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:13,000 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:13,531 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:14,066 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:14,584 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:15,079 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:15,532 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:16,096 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:16,796 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:20,450 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:22,608 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:22,983 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:23,500 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:23,900 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:24,244 | INFO     | services.notification_manager | [unknown_face/warning] Unknown person detected by camera.
+2026-08-04 12:52:24,322 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:26,227 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:26,598 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:26,988 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:27,586 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:28,089 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:31,879 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:33,147 | INFO     | matplotlib.category | Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
+2026-08-04 12:52:33,148 | INFO     | matplotlib.category | Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
+2026-08-04 12:52:34,512 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:37,328 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:38,076 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:38,538 | INFO     | matplotlib.category | Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
+2026-08-04 12:52:38,538 | INFO     | matplotlib.category | Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
+2026-08-04 12:52:38,986 | INFO     | matplotlib.category | Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
+2026-08-04 12:52:38,986 | INFO     | matplotlib.category | Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
+2026-08-04 12:52:40,457 | INFO     | matplotlib.category | Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
+2026-08-04 12:52:40,457 | INFO     | matplotlib.category | Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
+2026-08-04 12:52:42,105 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:43,194 | INFO     | services.dlib_compat | Using dlib compatibility fallback shim.
+2026-08-04 12:52:44,139 | INFO     | services.camera_manager | Camera released.
+2026-08-04 12:52:44,443 | INFO     | __main__ | Smart Attendance System shut down normally.
