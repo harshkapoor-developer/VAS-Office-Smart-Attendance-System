@@ -9,7 +9,7 @@ The main application window shown after login. Owns:
     - keyboard shortcuts (Q/R/A/S/L)
 
 Automatic, buttonless attendance marking happens here: every frame,
-recognized faces are passed to AttendanceManager.process_recognition()
+recognized faces are passed to AttendanceManager.mark_attendance()
 directly - no employee ever clicks anything.
 """
 
@@ -25,6 +25,7 @@ from gui.views.notifications_view import NotificationsView
 from gui.views.register_view import RegisterView
 from gui.views.reports_view import ReportsView
 from gui.views.settings_view import SettingsView
+from gui.widgets.attendance_popup import show_blocked_out_popup, show_success_popup
 from gui.widgets.error_dialog import show_error_dialog
 from gui.widgets.sidebar import Sidebar
 from services.attendance_manager import AttendanceManager
@@ -298,7 +299,7 @@ class DashboardApp(ctk.CTk):
                 self.notification_mgr.notify_unknown_face()
                 continue
             try:
-                record = self.att_mgr.process_recognition(employee_id)
+                outcome = self.att_mgr.mark_attendance(employee_id, result["confidence"])
             except EmployeeNotFoundError as exc:
                 logger.error("Recognized stale employee_id: %s", exc)
                 continue
@@ -312,14 +313,49 @@ class DashboardApp(ctk.CTk):
                     f"Attendance write failed: {exc}", level="error", category="system"
                 )
                 continue
-            if record is not None:
-                marked_any = True
-                event = "IN" if record.out_time == "--" else "OUT"
-                time_str = record.in_time if event == "IN" else record.out_time
-                self.notification_mgr.notify_attendance_marked(record.employee_name, f"{event} {time_str}")
 
-        if marked_any and self._active_view_key == "dashboard":
-            self.views["dashboard"].refresh_stats()
+            if outcome.outcome == "marked_in":
+                marked_any = True
+                record = outcome.record
+                self.notification_mgr.notify_attendance_in(
+                    record.employee_name, record.employee_id, record.time
+                )
+                show_success_popup(
+                    self, record.employee_name, record.employee_id,
+                    config.ATTENDANCE_STATUS_IN, record.time,
+                )
+
+            elif outcome.outcome == "marked_out":
+                marked_any = True
+                record = outcome.record
+                self.notification_mgr.notify_attendance_out(
+                    record.employee_name, record.employee_id, record.out_time, record.working_hours
+                )
+                show_success_popup(
+                    self, record.employee_name, record.employee_id,
+                    config.ATTENDANCE_STATUS_OUT, record.out_time,
+                    working_hours=record.working_hours,
+                )
+
+            elif outcome.outcome == "blocked":
+                self.notification_mgr.notify_out_blocked(
+                    outcome.employee_name, outcome.employee_id, outcome.remaining_minutes
+                )
+                show_blocked_out_popup(self, outcome.remaining_minutes)
+
+            # outcome == "already_out" -> intentionally silent, no popup/log spam
+
+        if marked_any:
+            if self._active_view_key == "dashboard":
+                self.views["dashboard"].refresh_stats()
+            elif self._active_view_key == "attendance":
+                self.views["attendance"].refresh()
+            else:
+                # Keep the off-screen dashboard/attendance data current too,
+                # so switching tabs later shows up-to-date IN/OUT rows
+                # instead of stale data from before this attendance event.
+                self.views["dashboard"].refresh_stats()
+                self.views["attendance"].refresh()
 
     def _employee_display_name(self, employee_id: str) -> str:
         employee = self.emp_mgr.get_employee(employee_id)

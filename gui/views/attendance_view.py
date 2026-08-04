@@ -14,7 +14,7 @@ import customtkinter as ctk
 import config
 from services.attendance_manager import AttendanceManager
 
-COLUMNS = ["Employee ID", "Employee Name", "In-Time", "Out-Time", "Status"]
+COLUMNS = ["Employee ID", "Employee Name", "Date", "In Time", "Out Time", "Status", "Working Hours"]
 
 
 class AttendanceView(ctk.CTkFrame):

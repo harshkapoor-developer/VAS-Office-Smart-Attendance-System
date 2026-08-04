@@ -86,10 +86,34 @@ class NotificationManager:
     # ------------------------------------------------------------------
     # Convenience wrappers for common event types
     # ------------------------------------------------------------------
-    def notify_attendance_marked(self, employee_name: str, event_time_str: str) -> NotificationEntry:
+    def notify_attendance_marked(self, employee_name: str, time_str: str, confidence: float) -> NotificationEntry:
         return self.notify(
-            f"Attendance: {employee_name} - {event_time_str}",
+            f"Attendance marked: {employee_name} at {time_str} ({confidence:.1f}% confidence)",
             level="success", category="attendance",
+        )
+
+    def notify_attendance_in(self, employee_name: str, employee_id: str, time_str: str) -> NotificationEntry:
+        return self.notify(
+            f"IN attendance marked: {employee_name} ({employee_id}) at {time_str}",
+            level="success", category="attendance",
+        )
+
+    def notify_attendance_out(
+        self, employee_name: str, employee_id: str, time_str: str, working_hours: str
+    ) -> NotificationEntry:
+        return self.notify(
+            f"OUT attendance marked: {employee_name} ({employee_id}) at {time_str} "
+            f"(working hours: {working_hours})",
+            level="success", category="attendance",
+        )
+
+    def notify_out_blocked(
+        self, employee_name: str, employee_id: str, remaining_minutes: float
+    ) -> NotificationEntry:
+        return self.notify(
+            f"OUT attendance blocked for {employee_name} ({employee_id}): "
+            f"{remaining_minutes:.0f} minute(s) remaining before OUT is allowed.",
+            level="warning", category="attendance",
         )
 
     def notify_unknown_face(self) -> NotificationEntry:
