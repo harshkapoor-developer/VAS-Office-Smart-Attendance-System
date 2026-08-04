@@ -1,0 +1,57 @@
+# smart-attendance.service
+# --------------------------
+# Autostarts the Smart Attendance System on Raspberry Pi boot, into the
+# desktop session so the GUI can actually display on the touchscreen.
+#
+# GUI apps need a running X/Wayland session (DISPLAY + XAUTHORITY), so
+# this targets graphical.target (the SYSTEM-level target reached once a
+# display manager/desktop session is ready) rather than multi-user.target,
+# which is reached earlier and would try to launch the GUI before any
+# display exists to show it on.
+#
+# Note: graphical.target (system-level, used here) is not the same as
+# graphical-session.target (a per-user target managed by `systemd --user`
+# inside an active login session) - using the wrong one is a common
+# mistake that makes the service silently never start correctly.
+#
+# INSTALL:
+#   1. Edit the User=, WorkingDirectory=, and ExecStart= paths below to
+#      match your actual username and install location if different
+#      from the defaults (assumes user "pi", project cloned to
+#      /home/pi/smart_attendance_system).
+#   2. sudo cp smart-attendance.service /etc/systemd/system/
+#   3. sudo systemctl daemon-reload
+#   4. sudo systemctl enable smart-attendance.service
+#   5. sudo systemctl start smart-attendance.service   # test without rebooting
+#
+# LOGS:
+#   journalctl -u smart-attendance.service -f
+#   (application-level logs are still also in logs/system.log as usual)
+#
+# UNINSTALL:
+#   sudo systemctl disable smart-attendance.service
+#   sudo rm /etc/systemd/system/smart-attendance.service
+#   sudo systemctl daemon-reload
+
+[Unit]
+Description=Smart Attendance System
+After=graphical.target network.target
+Wants=graphical.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/smart_attendance_system
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=/home/pi/.Xauthority
+ExecStart=/home/pi/smart_attendance_system/venv/bin/python3 /home/pi/smart_attendance_system/main.py
+Restart=on-failure
+RestartSec=5
+# Give the desktop session a moment to fully initialize on boot before
+# the first launch attempt - avoids a race where systemd starts this
+# before X is actually accepting connections, even after graphical.target.
+ExecStartPre=/bin/sleep 5
+
+[Install]
+WantedBy=graphical.target
