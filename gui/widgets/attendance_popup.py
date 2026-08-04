@@ -72,6 +72,46 @@ def show_success_popup(
     _finish_popup(dialog, "\n".join(lines))
 
 
+def show_out_confirmation_popup(parent, employee_name: str) -> bool:
+    """Modal Yes/No prompt shown before an OUT is committed. Blocks
+    (via wait_window) until the user answers, then returns True for YES
+    (proceed with OUT) or False for NO (cancel, record stays unchanged).
+    """
+    dialog = _base_popup(parent, "Confirm OUT Attendance", config.COLOR_WARNING_AMBER)
+
+    ctk.CTkLabel(
+        dialog, text=f"Are you leaving the office, {employee_name}?",
+        font=ctk.CTkFont(size=13), text_color=config.COLOR_WHITE,
+        wraplength=380, justify="left",
+    ).pack(pady=(0, 16), padx=20, fill="both", expand=True)
+
+    answer = {"confirmed": False}
+
+    def _on_yes() -> None:
+        answer["confirmed"] = True
+        dialog.destroy()
+
+    def _on_no() -> None:
+        answer["confirmed"] = False
+        dialog.destroy()
+
+    button_row = ctk.CTkFrame(dialog, fg_color="transparent")
+    button_row.pack(pady=(0, 16))
+
+    ctk.CTkButton(
+        button_row, text="YES", width=100, fg_color=config.COLOR_SUCCESS_GREEN,
+        command=_on_yes,
+    ).pack(side="left", padx=8)
+    ctk.CTkButton(
+        button_row, text="NO", width=100, fg_color=config.COLOR_DANGER_RED,
+        command=_on_no,
+    ).pack(side="left", padx=8)
+
+    dialog.protocol("WM_DELETE_WINDOW", _on_no)  # closing the dialog counts as NO
+    dialog.wait_window()  # block until the user answers
+    return answer["confirmed"]
+
+
 def show_blocked_out_popup(parent, remaining_minutes: float) -> None:
     dialog = _base_popup(parent, "OUT Attendance Blocked", config.COLOR_WARNING_AMBER)
     message = (

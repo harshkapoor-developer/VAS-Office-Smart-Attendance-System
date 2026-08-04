@@ -25,7 +25,11 @@ from gui.views.notifications_view import NotificationsView
 from gui.views.register_view import RegisterView
 from gui.views.reports_view import ReportsView
 from gui.views.settings_view import SettingsView
-from gui.widgets.attendance_popup import show_blocked_out_popup, show_success_popup
+from gui.widgets.attendance_popup import (
+    show_blocked_out_popup,
+    show_out_confirmation_popup,
+    show_success_popup,
+)
 from gui.widgets.error_dialog import show_error_dialog
 from gui.widgets.sidebar import Sidebar
 from services.attendance_manager import AttendanceManager
@@ -86,6 +90,21 @@ class DashboardApp(ctk.CTk):
         self.face_engine = face_engine or FaceRecognitionEngine(cache=self.encoding_cache)
         self.report_mgr = ReportManager(attendance_manager=self.att_mgr)
         self.notification_mgr = notification_manager or NotificationManager()
+
+        # Employee IDs for whom a "blocked OUT attempt" notification/popup
+        # has already been shown for their CURRENT blocked window. Prevents
+        # the same blocked message from firing every camera frame while the
+        # employee lingers in view - cleared for an employee the moment a
+        # new valid attendance event (IN or OUT) is recorded for them.
+        self._blocked_out_notified: set[str] = set()
+
+        # Employee IDs currently awaiting/declined an OUT confirmation
+        # ("Are you leaving the office?"). Prevents the same confirmation
+        # popup from reappearing on every camera frame while the employee
+        # is still in view after answering NO (or before answering) -
+        # cleared once they're no longer recognized in a frame, so their
+        # next visit gets a fresh prompt.
+        self._out_confirm_pending: set[str] = set()
 
         self._camera: CameraManager | None = None
         self._camera_loop_active = False
@@ -317,6 +336,7 @@ class DashboardApp(ctk.CTk):
             if outcome.outcome == "marked_in":
                 marked_any = True
                 record = outcome.record
+                self._blocked_out_notified.discard(record.employee_id)
                 self.notification_mgr.notify_attendance_in(
                     record.employee_name, record.employee_id, record.time
                 )
@@ -328,6 +348,7 @@ class DashboardApp(ctk.CTk):
             elif outcome.outcome == "marked_out":
                 marked_any = True
                 record = outcome.record
+                self._blocked_out_notified.discard(record.employee_id)
                 self.notification_mgr.notify_attendance_out(
                     record.employee_name, record.employee_id, record.out_time, record.working_hours
                 )
@@ -338,12 +359,68 @@ class DashboardApp(ctk.CTk):
                 )
 
             elif outcome.outcome == "blocked":
-                self.notification_mgr.notify_out_blocked(
-                    outcome.employee_name, outcome.employee_id, outcome.remaining_minutes
-                )
-                show_blocked_out_popup(self, outcome.remaining_minutes)
+                # Only notify/popup once per blocked window for this
+                # employee - repeated frames while they're still in front
+                # of the camera must not re-trigger the same message.
+                if outcome.employee_id not in self._blocked_out_notified:
+                    self._blocked_out_notified.add(outcome.employee_id)
+                    self.notification_mgr.notify_out_blocked(
+                        outcome.employee_name, outcome.employee_id, outcome.remaining_minutes
+                    )
+                    show_blocked_out_popup(self, outcome.remaining_minutes)
 
             # outcome == "already_out" -> intentionally silent, no popup/log spam
+
+            elif outcome.outcome == "out_ready":
+                # Only show the leaving-office confirmation once per visit
+                # for this employee - repeated frames while they're still
+                # in front of the camera (or after they answered NO) must
+                # not re-trigger duplicate confirmation popups.
+                if outcome.employee_id not in self._out_confirm_pending:
+                    self._out_confirm_pending.add(outcome.employee_id)
+                    confirmed = show_out_confirmation_popup(self, outcome.employee_name)
+
+                    if confirmed:
+                        try:
+                            out_outcome = self.att_mgr.confirm_out(outcome.employee_id, result["confidence"])
+                        except EmployeeNotFoundError as exc:
+                            logger.error("Recognized stale employee_id: %s", exc)
+                            out_outcome = None
+                        except AttendanceWriteError as exc:
+                            logger.error("Failed to write attendance record: %s", exc)
+                            self.notification_mgr.notify(
+                                f"Attendance write failed: {exc}", level="error", category="system"
+                            )
+                            out_outcome = None
+
+                        if out_outcome is not None and out_outcome.outcome == "marked_out":
+                            marked_any = True
+                            record = out_outcome.record
+                            self._out_confirm_pending.discard(record.employee_id)
+                            self.notification_mgr.notify_attendance_out(
+                                record.employee_name, record.employee_id,
+                                record.out_time, record.working_hours,
+                            )
+                            show_success_popup(
+                                self, record.employee_name, record.employee_id,
+                                config.ATTENDANCE_STATUS_OUT, record.out_time,
+                                working_hours=record.working_hours,
+                            )
+                    else:
+                        logger.info(
+                            "OUT attendance cancelled by employee | Employee ID: %s | Employee Name: %s",
+                            outcome.employee_id, outcome.employee_name,
+                        )
+                        self.notification_mgr.notify(
+                            f"OUT attendance cancelled: {outcome.employee_name} chose to stay.",
+                            level="info", category="attendance",
+                        )
+
+        # Employees no longer visible in this frame get their pending OUT
+        # confirmation cleared, so their next appearance prompts fresh
+        # instead of staying permanently suppressed after a NO answer.
+        currently_visible = {r["employee_id"] for r in results if r["employee_id"] is not None}
+        self._out_confirm_pending &= currently_visible
 
         if marked_any:
             if self._active_view_key == "dashboard":

@@ -89,6 +89,10 @@ class AttendanceOutcome:
     """Result of a mark_attendance() call. Exactly one of these shapes:
 
     outcome == "marked_in"    -> record is the new IN row that was written.
+    outcome == "out_ready"    -> minimum gap satisfied; OUT has NOT been
+                                  written yet - caller must ask the user
+                                  to confirm ("Are you leaving the
+                                  office?") and call confirm_out() on Yes.
     outcome == "marked_out"   -> record is the updated row (now OUT), with
                                   working_hours filled in.
     outcome == "blocked"      -> OUT was attempted too soon; record is None
@@ -218,8 +222,57 @@ class AttendanceManager:
             )
 
         # ------------------------------------------------------------
-        # Case 4: gap satisfied -> mark OUT, update the existing row
+        # Case 4: gap satisfied -> OUT is now allowed, but do NOT write
+        # yet. The employee must first confirm via the "Are you leaving
+        # the office?" popup - only confirm_out() actually commits the
+        # OUT record. Returning here leaves the record unchanged.
         # ------------------------------------------------------------
+        logger.debug(
+            "OUT eligible (awaiting confirmation): %s (%s)", employee.name, employee.employee_id
+        )
+        return AttendanceOutcome(
+            outcome="out_ready",
+            employee_name=employee.name, employee_id=employee.employee_id,
+        )
+
+    def confirm_out(
+        self, employee_id: str, confidence_percent: float, now: Optional[datetime] = None
+    ) -> AttendanceOutcome:
+        """Commits the OUT record after the user has confirmed "Yes" on
+        the leaving-office prompt. Re-validates the employee is still
+        eligible (still IN today, minimum gap still satisfied) so a stale
+        confirmation dialog can't write bad data if the state changed in
+        the meantime. Returns outcome "already_out" or "blocked" instead
+        of writing if re-validation fails; never raises for those cases.
+        """
+        now = now or datetime.now()
+        today_str = now.strftime("%Y-%m-%d")
+
+        employee = self.emp_mgr.get_employee(employee_id)
+        if employee is None:
+            raise EmployeeNotFoundError(
+                f"Recognized employee_id '{employee_id}' no longer exists in the database."
+            )
+
+        state = self.db.get_attendance_state(employee_id)
+        if state is None or state["date"] != today_str:
+            return AttendanceOutcome(
+                outcome="already_out", employee_name=employee.name, employee_id=employee_id,
+            )
+        if state["status"] == config.ATTENDANCE_STATUS_OUT:
+            return AttendanceOutcome(
+                outcome="already_out", employee_name=employee.name, employee_id=employee_id,
+            )
+
+        in_time = datetime.fromisoformat(state["in_time"])
+        elapsed_minutes = (now - in_time).total_seconds() / 60.0
+        remaining_minutes = config.MINIMUM_OUT_TIME_MINUTES - elapsed_minutes
+        if remaining_minutes > 0:
+            return AttendanceOutcome(
+                outcome="blocked", remaining_minutes=max(0.0, remaining_minutes),
+                employee_name=employee.name, employee_id=employee_id,
+            )
+
         working_hours_str = self._format_duration(now - in_time)
         out_time_str = now.strftime("%H:%M:%S")
 
