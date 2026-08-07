@@ -22,6 +22,9 @@ from matplotlib.figure import Figure
 import config
 from services.report_manager import ReportManager
 from utils.exceptions import ValidationError
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 COLUMNS = ["Date", "Employee Name", "Employee ID", "In-Time", "Out-Time", "Status"]
 
@@ -130,6 +133,7 @@ class ReportsView(ctk.CTkFrame):
         search_row.pack(fill="x", padx=12, pady=(0, 8))
         self.history_search_entry = ctk.CTkEntry(search_row, placeholder_text="Employee Name or ID", width=220)
         self.history_search_entry.pack(side="left", padx=(0, 8))
+        self.history_search_entry.bind("<Return>", lambda e: self._search_employee_history())
         ctk.CTkButton(search_row, text="Search", width=90, command=self._search_employee_history).pack(side="left")
 
         self.history_summary_label = ctk.CTkLabel(panel, text="", text_color=config.COLOR_WHITE, justify="left")
@@ -148,13 +152,22 @@ class ReportsView(ctk.CTkFrame):
         if not term:
             return
 
-        matches = self.report_mgr.find_employees(term)
-        if not matches:
-            self.history_summary_label.configure(text="No employee found.", text_color=config.COLOR_WARNING_AMBER)
-            return
+        try:
+            matches = self.report_mgr.find_employees(term)
+            if not matches:
+                self.history_summary_label.configure(
+                    text="No attendance records found.", text_color=config.COLOR_WARNING_AMBER
+                )
+                return
 
-        employee = matches[0]
-        result = self.report_mgr.get_employee_history(employee.employee_id)
+            employee = matches[0]
+            result = self.report_mgr.get_employee_history(employee.employee_id)
+        except Exception as exc:  # noqa: BLE001 - a search must never fail silently or crash the app
+            logger.exception("Employee history search failed for term=%r", term)
+            self.history_summary_label.configure(
+                text=f"Search failed: {exc}", text_color=config.COLOR_DANGER_RED
+            )
+            return
 
         self.history_summary_label.configure(
             text=(

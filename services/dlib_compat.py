@@ -153,7 +153,12 @@ def _typeerror_originated_in_compute_face_descriptor(exc: TypeError) -> bool:
     worded, which is exactly what distinguishes "the known dlib break"
     from "some unrelated bug that happens to also raise TypeError".
     """
-    return "compute_face_descriptor" in str(exc)
+    tb = exc.__traceback__
+    while tb is not None:
+        if tb.tb_frame.f_code.co_name == "compute_face_descriptor":
+            return True
+        tb = tb.tb_next
+    return False
 
 
 def safe_face_encodings(

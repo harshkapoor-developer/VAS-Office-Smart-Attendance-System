@@ -9,7 +9,7 @@ place.
 Tables:
     employees        - one row per employee (see models/employee.py)
     admin            - exactly one row, single-administrator credentials
-    last_attendance  - tracks the last time each employee was marked
+    daily_attendance_state - tracks each employee's IN/OUT state per day
                         present, used to enforce the same-day duplicate
                         cooldown. The CSV files remain the source of
                         truth for actual attendance records/reports.
@@ -53,24 +53,17 @@ CREATE TABLE IF NOT EXISTS admin (
     updated_at    TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS last_attendance (
-    employee_id      TEXT PRIMARY KEY,
-    last_marked_at   TEXT NOT NULL,
-    FOREIGN KEY (employee_id) REFERENCES employees (employee_id)
-        ON DELETE CASCADE
-);
-
--- Tracks each employee's current IN/OUT punch state for "today". One row
--- per employee; overwritten (not appended) as their state changes, and
--- naturally treated as stale/reset once `date` no longer matches today by
--- the caller (AttendanceManager). This is what lets us update the SAME
--- attendance record on OUT instead of creating a new row.
-CREATE TABLE IF NOT EXISTS attendance_state (
-    employee_id      TEXT PRIMARY KEY,
-    date             TEXT NOT NULL,
-    status           TEXT NOT NULL,
-    in_time          TEXT NOT NULL,
-    out_time         TEXT,
+-- Tracks today's IN/OUT state per employee, keyed by date so it's
+-- automatically fresh each day and restart-safe (state is read back
+-- from here, not re-derived from CSV, so a crash/restart never
+-- duplicates or loses an IN/OUT transition).
+CREATE TABLE IF NOT EXISTS daily_attendance_state (
+    employee_id   TEXT NOT NULL,
+    date          TEXT NOT NULL,   -- YYYY-MM-DD
+    status        TEXT NOT NULL,   -- 'in' or 'out'
+    in_time_iso   TEXT,
+    out_time_iso  TEXT,
+    PRIMARY KEY (employee_id, date),
     FOREIGN KEY (employee_id) REFERENCES employees (employee_id)
         ON DELETE CASCADE
 );
@@ -187,8 +180,7 @@ class DatabaseManager:
         if self.get_employee(employee_id) is None:
             raise EmployeeNotFoundError(f"Employee ID '{employee_id}' does not exist.")
         with self._connect() as conn:
-            conn.execute("DELETE FROM last_attendance WHERE employee_id = ?", (employee_id,))
-            conn.execute("DELETE FROM attendance_state WHERE employee_id = ?", (employee_id,))
+            conn.execute("DELETE FROM daily_attendance_state WHERE employee_id = ?", (employee_id,))
             conn.execute("DELETE FROM employees WHERE employee_id = ?", (employee_id,))
         logger.info("Employee deleted: %s", employee_id)
 
@@ -245,65 +237,42 @@ class DatabaseManager:
         logger.info("Employee %s active status set to %s", employee_id, is_active)
 
     # ------------------------------------------------------------------
-    # Last-attendance tracking (duplicate-mark cooldown support)
+    # Daily IN/OUT state (restart-safe; keyed by date, no cooldown)
     # ------------------------------------------------------------------
-    def get_last_marked_at(self, employee_id: str) -> Optional[str]:
+    def get_today_state(self, employee_id: str, date_str: str) -> Optional[dict]:
         with self._connect() as conn:
             row = conn.execute(
-                "SELECT last_marked_at FROM last_attendance WHERE employee_id = ?",
-                (employee_id,),
+                "SELECT * FROM daily_attendance_state WHERE employee_id = ? AND date = ?",
+                (employee_id, date_str),
             ).fetchone()
-        return row["last_marked_at"] if row else None
+        return dict(row) if row else None
 
-    def set_last_marked_at(self, employee_id: str, timestamp_iso: str) -> None:
+    def mark_in(self, employee_id: str, date_str: str, in_time_iso: str) -> None:
         with self._connect() as conn:
             conn.execute(
                 """
-                INSERT INTO last_attendance (employee_id, last_marked_at)
-                VALUES (?, ?)
-                ON CONFLICT(employee_id) DO UPDATE SET last_marked_at = excluded.last_marked_at
-                """,
-                (employee_id, timestamp_iso),
-            )
-
-    # ------------------------------------------------------------------
-    # IN / OUT attendance state (per employee, per day)
-    # ------------------------------------------------------------------
-    def get_attendance_state(self, employee_id: str) -> Optional[sqlite3.Row]:
-        """Returns the employee's current punch-state row (employee_id,
-        date, status, in_time, out_time), or None if they have no state
-        recorded yet. Caller is responsible for checking whether `date`
-        matches today - a state row from a previous day means "no state
-        for today" even though a row exists.
-        """
-        with self._connect() as conn:
-            row = conn.execute(
-                "SELECT * FROM attendance_state WHERE employee_id = ?",
-                (employee_id,),
-            ).fetchone()
-        return row
-
-    def set_attendance_state_in(self, employee_id: str, date_str: str, in_time_iso: str) -> None:
-        with self._connect() as conn:
-            conn.execute(
-                """
-                INSERT INTO attendance_state (employee_id, date, status, in_time, out_time)
-                VALUES (?, ?, 'IN', ?, NULL)
-                ON CONFLICT(employee_id) DO UPDATE SET
-                    date = excluded.date,
-                    status = 'IN',
-                    in_time = excluded.in_time,
-                    out_time = NULL
+                INSERT INTO daily_attendance_state (employee_id, date, status, in_time_iso, out_time_iso)
+                VALUES (?, ?, 'in', ?, NULL)
+                ON CONFLICT(employee_id, date) DO UPDATE SET
+                    status = 'in', in_time_iso = excluded.in_time_iso
                 """,
                 (employee_id, date_str, in_time_iso),
             )
 
-    def set_attendance_state_out(self, employee_id: str, out_time_iso: str) -> None:
+    def mark_out(self, employee_id: str, date_str: str, out_time_iso: str) -> None:
         with self._connect() as conn:
             conn.execute(
-                "UPDATE attendance_state SET status = 'OUT', out_time = ? WHERE employee_id = ?",
-                (out_time_iso, employee_id),
+                "UPDATE daily_attendance_state SET status = 'out', out_time_iso = ? "
+                "WHERE employee_id = ? AND date = ?",
+                (out_time_iso, employee_id, date_str),
             )
+
+    def list_today_states(self, date_str: str) -> list[dict]:
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT * FROM daily_attendance_state WHERE date = ?", (date_str,)
+            ).fetchall()
+        return [dict(r) for r in rows]
 
     # ------------------------------------------------------------------
     # Admin credentials

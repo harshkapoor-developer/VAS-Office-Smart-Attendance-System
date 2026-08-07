@@ -22,7 +22,7 @@ BASE_DIR: Path = Path(__file__).resolve().parent
 
 DATABASE_DIR: Path = BASE_DIR / "database"
 EMPLOYEE_IMAGES_DIR: Path = BASE_DIR / "employee_images"
-ATTENDANCE_RECORDS_DIR: Path = BASE_DIR / "attendance_records"
+ATTENDANCE_RECORDS_DIR: Path = BASE_DIR / "attendance"  # year/month/day-file archive
 LOGS_DIR: Path = BASE_DIR / "logs"
 EXPORTS_DIR: Path = BASE_DIR / "exports"
 ASSETS_DIR: Path = BASE_DIR / "assets"
@@ -48,41 +48,16 @@ ENCODINGS_FILE: Path = DATABASE_DIR / "encodings.pkl"
 # --------------------------------------------------------------------------
 # ATTENDANCE / CSV
 # --------------------------------------------------------------------------
-ATTENDANCE_FILENAME_PATTERN: str = "attendance_{date}.csv"  # date = YYYY-MM-DD
-
-# NOTE: "Time" is kept for backward compatibility (existing CSV/Excel
-# consumers) and always mirrors the IN time. "In Time", "Out Time" and
-# "Working Hours" are new columns appended at the end so old exports
-# that only read the first columns keep working unchanged.
+# One file per calendar day, archived under attendance/{year}/{MonthName}/.
+# SD-card safe: plain files, no DB server, works unchanged in hardware mode.
+ATTENDANCE_FILENAME_PATTERN: str = "{date}_attendance.csv"  # date = YYYY-MM-DD
 ATTENDANCE_CSV_COLUMNS: list[str] = [
-    "Employee ID",
-    "Employee Name",
-    "Department",
-    "Date",
-    "Time",
-    "Day",
-    "Status",
-    "Confidence %",
-    "In Time",
-    "Out Time",
-    "Working Hours",
+    "Date", "Employee Name", "Employee ID", "In-Time", "Out-Time", "Status",
 ]
-ATTENDANCE_STATUS_PRESENT: str = "Present"  # legacy value, still used by old test fixtures
-ATTENDANCE_STATUS_IN: str = "IN"
-ATTENDANCE_STATUS_OUT: str = "OUT"
-
-# Prevents the same employee from being marked twice within this window
-# (seconds) even if they linger in front of the camera.
-DUPLICATE_MARK_COOLDOWN_SECONDS: int = 60 * 60 * 8  # 8 hours = once per shift
-
-# --------------------------------------------------------------------------
-# IN / OUT ATTENDANCE RULES
-# --------------------------------------------------------------------------
-# Minimum number of minutes that must elapse after an employee's IN scan
-# before an OUT scan will be accepted. Recognitions that happen sooner are
-# blocked (the employee stays marked IN) and the user is notified. Change
-# this single value to retune the rule everywhere in the app.
-MINIMUM_OUT_TIME_MINUTES: int = 60
+ATTENDANCE_STATUS_PRESENT: str = "Present"
+ATTENDANCE_STATUS_ABSENT: str = "Absent"
+ATTENDANCE_DATE_DISPLAY_FORMAT: str = "%d-%m-%Y"   # e.g. 03-08-2026
+ATTENDANCE_TIME_DISPLAY_FORMAT: str = "%I:%M:%S %p"  # e.g. 09:12:35 AM
 
 # --------------------------------------------------------------------------
 # FACE RECOGNITION
@@ -91,7 +66,7 @@ FACE_RECOGNITION_TOLERANCE: float = 0.5  # lower = stricter match
 FACE_DETECTION_MODEL: str = "hog"  # "hog" (CPU, fast) or "cnn" (GPU, slower on Pi)
 FACE_ENCODING_JITTERS: int = 1  # re-samples per encoding; raise for accuracy, costs speed
 MIN_CONFIDENCE_PERCENT: float = 55.0  # below this, treat as Unknown even if matched
-CAPTURE_ANGLES_PER_EMPLOYEE: int = 5  # photos taken during registration
+CAPTURE_ANGLES_PER_EMPLOYEE: int = 18  # photos taken during registration (15-20 range)
 RECOGNITION_FRAME_RESIZE_SCALE: float = 0.25  # downscale factor for speed
 
 # --------------------------------------------------------------------------

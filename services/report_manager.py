@@ -143,8 +143,24 @@ class ReportManager:
         }
 
     def find_employees(self, search_term: str):
-        """Search by name or ID for the employee-history lookup UI."""
-        return self.att_mgr.emp_mgr.search_employees(search_term=search_term)
+        """Search for the employee-history lookup UI. Tries an EXACT,
+        case-insensitive Employee ID match first - this is deterministic
+        and avoids two failure modes of a pure substring search: (1) an
+        ID that's a substring of another ID (e.g. "EMP001" vs "EMP0010")
+        picking the wrong employee, and (2) SQL LIKE wildcard characters
+        (% or _) inside an ID breaking the match unexpectedly. Falls
+        back to the broader name/ID substring search so partial-name
+        lookups keep working exactly as before.
+        """
+        term = (search_term or "").strip()
+        if not term:
+            return []
+
+        for employee in self.att_mgr.emp_mgr.list_all(active_only=False):
+            if employee.employee_id.strip().lower() == term.lower():
+                return [employee]
+
+        return self.att_mgr.emp_mgr.search_employees(search_term=term)
 
     # ------------------------------------------------------------------
     # Export: CSV

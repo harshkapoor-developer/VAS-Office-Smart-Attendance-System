@@ -9,11 +9,13 @@ The main application window shown after login. Owns:
     - keyboard shortcuts (Q/R/A/S/L)
 
 Automatic, buttonless attendance marking happens here: every frame,
-recognized faces are passed to AttendanceManager.mark_attendance()
+recognized faces are passed to AttendanceManager.process_recognition()
 directly - no employee ever clicks anything.
 """
 
 from __future__ import annotations
+
+import tkinter as tk
 
 import customtkinter as ctk
 
@@ -25,11 +27,6 @@ from gui.views.notifications_view import NotificationsView
 from gui.views.register_view import RegisterView
 from gui.views.reports_view import ReportsView
 from gui.views.settings_view import SettingsView
-from gui.widgets.attendance_popup import (
-    show_blocked_out_popup,
-    show_out_confirmation_popup,
-    show_success_popup,
-)
 from gui.widgets.error_dialog import show_error_dialog
 from gui.widgets.sidebar import Sidebar
 from services.attendance_manager import AttendanceManager
@@ -90,21 +87,6 @@ class DashboardApp(ctk.CTk):
         self.face_engine = face_engine or FaceRecognitionEngine(cache=self.encoding_cache)
         self.report_mgr = ReportManager(attendance_manager=self.att_mgr)
         self.notification_mgr = notification_manager or NotificationManager()
-
-        # Employee IDs for whom a "blocked OUT attempt" notification/popup
-        # has already been shown for their CURRENT blocked window. Prevents
-        # the same blocked message from firing every camera frame while the
-        # employee lingers in view - cleared for an employee the moment a
-        # new valid attendance event (IN or OUT) is recorded for them.
-        self._blocked_out_notified: set[str] = set()
-
-        # Employee IDs currently awaiting/declined an OUT confirmation
-        # ("Are you leaving the office?"). Prevents the same confirmation
-        # popup from reappearing on every camera frame while the employee
-        # is still in view after answering NO (or before answering) -
-        # cleared once they're no longer recognized in a frame, so their
-        # next visit gets a fresh prompt.
-        self._out_confirm_pending: set[str] = set()
 
         self._camera: CameraManager | None = None
         self._camera_loop_active = False
@@ -214,11 +196,27 @@ class DashboardApp(ctk.CTk):
     # Keyboard shortcuts
     # ------------------------------------------------------------------
     def _bind_shortcuts(self) -> None:
-        self.bind(f"<KeyPress-{config.SHORTCUT_QUIT}>", lambda e: self._on_close())
-        self.bind(f"<KeyPress-{config.SHORTCUT_REGISTER}>", lambda e: self.sidebar.navigate_to("register"))
-        self.bind(f"<KeyPress-{config.SHORTCUT_TODAY_ATTENDANCE}>", lambda e: self.sidebar.navigate_to("attendance"))
-        self.bind(f"<KeyPress-{config.SHORTCUT_NOTIFICATIONS}>", lambda e: self.sidebar.navigate_to("notifications"))
-        self.bind(f"<KeyPress-{config.SHORTCUT_EMPLOYEE_LIST}>", lambda e: self.sidebar.navigate_to("employees"))
+        self.bind(f"<KeyPress-{config.SHORTCUT_QUIT}>", self._guarded(lambda: self._on_close()))
+        self.bind(f"<KeyPress-{config.SHORTCUT_REGISTER}>", self._guarded(lambda: self.sidebar.navigate_to("register")))
+        self.bind(f"<KeyPress-{config.SHORTCUT_TODAY_ATTENDANCE}>", self._guarded(lambda: self.sidebar.navigate_to("attendance")))
+        self.bind(f"<KeyPress-{config.SHORTCUT_NOTIFICATIONS}>", self._guarded(lambda: self.sidebar.navigate_to("notifications")))
+        self.bind(f"<KeyPress-{config.SHORTCUT_EMPLOYEE_LIST}>", self._guarded(lambda: self.sidebar.navigate_to("employees")))
+
+    def _guarded(self, action):
+        """Wraps a keyboard-shortcut callback so it's ignored whenever a
+        text-input widget (Entry/Textbox, including CTk's wrappers) has
+        focus. Without this, Tk fires these root-level single-key
+        bindings on EVERY keypress in the whole window, even while
+        typing into a form field - so typing "register" in the Register
+        Employee form would jump to Reports (r), Attendance (a), etc.,
+        and "q" would try to quit the app mid-keystroke.
+        """
+        def handler(event):
+            focused = self.focus_get()
+            if isinstance(focused, (ctk.CTkEntry, ctk.CTkTextbox, tk.Entry, tk.Text)):
+                return  # let the keystroke go to the text field normally
+            action()
+        return handler
 
     # ------------------------------------------------------------------
     # Camera / recognition loop
@@ -318,7 +316,7 @@ class DashboardApp(ctk.CTk):
                 self.notification_mgr.notify_unknown_face()
                 continue
             try:
-                outcome = self.att_mgr.mark_attendance(employee_id, result["confidence"])
+                record = self.att_mgr.process_recognition(employee_id)
             except EmployeeNotFoundError as exc:
                 logger.error("Recognized stale employee_id: %s", exc)
                 continue
@@ -332,107 +330,14 @@ class DashboardApp(ctk.CTk):
                     f"Attendance write failed: {exc}", level="error", category="system"
                 )
                 continue
-
-            if outcome.outcome == "marked_in":
+            if record is not None:
                 marked_any = True
-                record = outcome.record
-                self._blocked_out_notified.discard(record.employee_id)
-                self.notification_mgr.notify_attendance_in(
-                    record.employee_name, record.employee_id, record.time
-                )
-                show_success_popup(
-                    self, record.employee_name, record.employee_id,
-                    config.ATTENDANCE_STATUS_IN, record.time,
-                )
+                event = "IN" if record.out_time == "--" else "OUT"
+                time_str = record.in_time if event == "IN" else record.out_time
+                self.notification_mgr.notify_attendance_marked(record.employee_name, f"{event} {time_str}")
 
-            elif outcome.outcome == "marked_out":
-                marked_any = True
-                record = outcome.record
-                self._blocked_out_notified.discard(record.employee_id)
-                self.notification_mgr.notify_attendance_out(
-                    record.employee_name, record.employee_id, record.out_time, record.working_hours
-                )
-                show_success_popup(
-                    self, record.employee_name, record.employee_id,
-                    config.ATTENDANCE_STATUS_OUT, record.out_time,
-                    working_hours=record.working_hours,
-                )
-
-            elif outcome.outcome == "blocked":
-                # Only notify/popup once per blocked window for this
-                # employee - repeated frames while they're still in front
-                # of the camera must not re-trigger the same message.
-                if outcome.employee_id not in self._blocked_out_notified:
-                    self._blocked_out_notified.add(outcome.employee_id)
-                    self.notification_mgr.notify_out_blocked(
-                        outcome.employee_name, outcome.employee_id, outcome.remaining_minutes
-                    )
-                    show_blocked_out_popup(self, outcome.remaining_minutes)
-
-            # outcome == "already_out" -> intentionally silent, no popup/log spam
-
-            elif outcome.outcome == "out_ready":
-                # Only show the leaving-office confirmation once per visit
-                # for this employee - repeated frames while they're still
-                # in front of the camera (or after they answered NO) must
-                # not re-trigger duplicate confirmation popups.
-                if outcome.employee_id not in self._out_confirm_pending:
-                    self._out_confirm_pending.add(outcome.employee_id)
-                    confirmed = show_out_confirmation_popup(self, outcome.employee_name)
-
-                    if confirmed:
-                        try:
-                            out_outcome = self.att_mgr.confirm_out(outcome.employee_id, result["confidence"])
-                        except EmployeeNotFoundError as exc:
-                            logger.error("Recognized stale employee_id: %s", exc)
-                            out_outcome = None
-                        except AttendanceWriteError as exc:
-                            logger.error("Failed to write attendance record: %s", exc)
-                            self.notification_mgr.notify(
-                                f"Attendance write failed: {exc}", level="error", category="system"
-                            )
-                            out_outcome = None
-
-                        if out_outcome is not None and out_outcome.outcome == "marked_out":
-                            marked_any = True
-                            record = out_outcome.record
-                            self._out_confirm_pending.discard(record.employee_id)
-                            self.notification_mgr.notify_attendance_out(
-                                record.employee_name, record.employee_id,
-                                record.out_time, record.working_hours,
-                            )
-                            show_success_popup(
-                                self, record.employee_name, record.employee_id,
-                                config.ATTENDANCE_STATUS_OUT, record.out_time,
-                                working_hours=record.working_hours,
-                            )
-                    else:
-                        logger.info(
-                            "OUT attendance cancelled by employee | Employee ID: %s | Employee Name: %s",
-                            outcome.employee_id, outcome.employee_name,
-                        )
-                        self.notification_mgr.notify(
-                            f"OUT attendance cancelled: {outcome.employee_name} chose to stay.",
-                            level="info", category="attendance",
-                        )
-
-        # Employees no longer visible in this frame get their pending OUT
-        # confirmation cleared, so their next appearance prompts fresh
-        # instead of staying permanently suppressed after a NO answer.
-        currently_visible = {r["employee_id"] for r in results if r["employee_id"] is not None}
-        self._out_confirm_pending &= currently_visible
-
-        if marked_any:
-            if self._active_view_key == "dashboard":
-                self.views["dashboard"].refresh_stats()
-            elif self._active_view_key == "attendance":
-                self.views["attendance"].refresh()
-            else:
-                # Keep the off-screen dashboard/attendance data current too,
-                # so switching tabs later shows up-to-date IN/OUT rows
-                # instead of stale data from before this attendance event.
-                self.views["dashboard"].refresh_stats()
-                self.views["attendance"].refresh()
+        if marked_any and self._active_view_key == "dashboard":
+            self.views["dashboard"].refresh_stats()
 
     def _employee_display_name(self, employee_id: str) -> str:
         employee = self.emp_mgr.get_employee(employee_id)

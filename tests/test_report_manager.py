@@ -136,6 +136,38 @@ class TestReportManager(unittest.TestCase):
         self.assertEqual(len(self.report_mgr.find_employees("Harsh")), 1)
         self.assertEqual(len(self.report_mgr.find_employees("EMP002")), 1)
 
+    def test_find_employees_exact_id_case_insensitive(self) -> None:
+        for term in ("EMP001", "emp001", "Emp001", "  EMP001  "):
+            matches = self.report_mgr.find_employees(term)
+            self.assertEqual(len(matches), 1, f"failed for term={term!r}")
+            self.assertEqual(matches[0].employee_id, "EMP001")
+
+    def test_find_employees_exact_id_wins_over_substring_collision(self) -> None:
+        self.emp_mgr.register_employee(
+            employee_id="EMP0010", name="Substring Collision", department="Ops",
+            designation="Tech", mobile="7770001111", email="collision@example.com",
+        )
+        matches = self.report_mgr.find_employees("EMP001")
+        self.assertEqual(len(matches), 1)
+        self.assertEqual(matches[0].employee_id, "EMP001")  # exact match, not the substring collider
+
+    def test_find_employees_invalid_id_returns_empty(self) -> None:
+        self.assertEqual(self.report_mgr.find_employees("EMP999"), [])
+        self.assertEqual(self.report_mgr.find_employees("NoSuchPerson"), [])
+
+    def test_employee_history_for_employee_with_zero_attendance(self) -> None:
+        self.emp_mgr.register_employee(
+            employee_id="EMP003", name="Never Scanned", department="Ops",
+            designation="Tech", mobile="7778889999", email="never@example.com",
+            joining_date="2026-08-01",
+        )
+        result = self.report_mgr.get_employee_history(
+            "EMP003", start_date=date(2026, 8, 1), end_date=date(2026, 8, 2)
+        )
+        self.assertEqual(result["days_present"], 0)
+        self.assertEqual(result["days_absent"], 2)
+        self.assertTrue(all(h["Status"] == "Absent" for h in result["history"]))
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

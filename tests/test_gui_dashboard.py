@@ -79,6 +79,51 @@ class TestGuiDashboard(unittest.TestCase):
         finally:
             app._on_close()
 
+    def test_typing_in_form_field_does_not_trigger_shortcuts(self) -> None:
+        """Regression test for a real bug: typing into the Register
+        Employee form's text fields (which naturally contain letters
+        r/a/s/l/q) used to trigger the Q/R/A/S/L keyboard shortcuts,
+        jumping tabs mid-keystroke or even quitting the app on 'q'.
+        """
+        from gui.dashboard import DashboardApp
+
+        app = DashboardApp(
+            auth=self.auth, db=self.db, employee_manager=self.emp_mgr,
+            attendance_manager=self.att_mgr, encoding_cache=self.encoding_cache,
+        )
+        try:
+            app.update()
+            app.sidebar.navigate_to("register")
+            app.update()
+            register_view = app.views["register"]
+
+            name_entry = register_view.entries["name"]
+            app.focus_force()
+            name_entry.focus_set()
+            app.update()
+
+            # Typing letters that are also shortcut keys must land in the
+            # field, not navigate away or close the app.
+            name_entry.insert(0, "Rasa Quinn")
+            for key in ("r", "a", "s", "l", "q"):
+                name_entry.event_generate(f"<KeyPress-{key}>")
+            app.update()
+
+            self.assertEqual(app._active_view_key, "register")  # did not navigate away
+            self.assertFalse(app._closing)  # 'q' did not quit the app
+            # The keystrokes should land normally in the field (that's the
+            # whole point of the fix) - real typing appends each character.
+            self.assertEqual(name_entry.get(), "Rasa Quinnraslq")
+
+            # Shortcuts must still work when focus is NOT on a text field.
+            app.focus_set()
+            app.update()
+            app.event_generate("<KeyPress-a>")
+            app.update()
+            self.assertEqual(app._active_view_key, "attendance")
+        finally:
+            app._on_close()
+
     def test_register_view_creates_real_employee(self) -> None:
         from gui.dashboard import DashboardApp
 
@@ -94,13 +139,19 @@ class TestGuiDashboard(unittest.TestCase):
             register_view.entries["mobile"].insert(0, "9998887777")
             register_view.entries["email"].insert(0, "test@example.com")
 
-            register_view._handle_submit()
+            # Save must start disabled until face capture succeeds.
+            self.assertEqual(register_view.submit_btn.cget("state"), "disabled")
+
+            # Capture Face saves the employee's metadata immediately (before
+            # the camera modal even opens) - no real camera is present in
+            # this sandbox, so the dialog will fail/cancel, but the DB row
+            # must already exist by that point.
+            register_view._handle_capture_face()
             app.update()
 
             saved = app.emp_mgr.get_employee("EMP100")
             self.assertIsNotNone(saved)
             self.assertEqual(saved.name, "Test Employee")
-            self.assertIn("Saved 'Test Employee'", register_view.status_label.cget("text"))
         finally:
             app._on_close()
 
@@ -119,11 +170,12 @@ class TestGuiDashboard(unittest.TestCase):
             register_view.entries["mobile"].insert(0, "9998887777")
             register_view.entries["email"].insert(0, "test@example.com")
 
-            register_view._handle_submit()
+            register_view._handle_capture_face()
             app.update()
 
             self.assertIsNone(app.emp_mgr.get_employee("e"))
             self.assertTrue(len(register_view.status_label.cget("text")) > 0)
+            self.assertEqual(register_view.submit_btn.cget("state"), "disabled")
         finally:
             app._on_close()
 
@@ -227,6 +279,135 @@ class TestGuiDashboard(unittest.TestCase):
         finally:
             app._on_close()
 
+    def test_employee_history_search_button_finds_by_exact_id(self) -> None:
+        from gui.dashboard import DashboardApp
+
+        app = DashboardApp(
+            auth=self.auth, db=self.db, employee_manager=self.emp_mgr,
+            attendance_manager=self.att_mgr, encoding_cache=self.encoding_cache,
+        )
+        try:
+            app.update()
+            app.emp_mgr.register_employee(
+                employee_id="EMP401", name="History Target", department="Ops",
+                designation="Tech", mobile="9990005555", email="history@example.com",
+            )
+            app.att_mgr.process_recognition("EMP401")
+
+            app.sidebar.navigate_to("reports")
+            app.update()
+            reports_view = app.views["reports"]
+
+            reports_view.history_search_entry.insert(0, "EMP401")
+            reports_view._search_employee_history()
+            app.update()
+
+            summary = reports_view.history_summary_label.cget("text")
+            self.assertIn("History Target", summary)
+            self.assertIn("EMP401", summary)
+            self.assertGreater(len(reports_view.history_table_frame.winfo_children()), 0)
+        finally:
+            app._on_close()
+
+    def test_employee_history_search_case_insensitive_and_enter_key(self) -> None:
+        from gui.dashboard import DashboardApp
+
+        app = DashboardApp(
+            auth=self.auth, db=self.db, employee_manager=self.emp_mgr,
+            attendance_manager=self.att_mgr, encoding_cache=self.encoding_cache,
+        )
+        try:
+            app.update()
+            app.emp_mgr.register_employee(
+                employee_id="EMP402", name="Enter Key Target", department="Ops",
+                designation="Tech", mobile="9990006666", email="enter@example.com",
+            )
+            app.att_mgr.process_recognition("EMP402")
+
+            app.sidebar.navigate_to("reports")
+            app.update()
+            reports_view = app.views["reports"]
+
+            reports_view.history_search_entry.insert(0, "emp402")  # lowercase, exact ID
+            app.focus_force()
+            reports_view.history_search_entry.focus_set()
+            app.update()
+            reports_view.history_search_entry.event_generate("<Return>")
+            app.update()
+
+            summary = reports_view.history_summary_label.cget("text")
+            self.assertIn("Enter Key Target", summary)
+        finally:
+            app._on_close()
+
+    def test_employee_history_search_invalid_id_shows_clear_message_no_crash(self) -> None:
+        from gui.dashboard import DashboardApp
+
+        app = DashboardApp(
+            auth=self.auth, db=self.db, employee_manager=self.emp_mgr,
+            attendance_manager=self.att_mgr, encoding_cache=self.encoding_cache,
+        )
+        try:
+            app.update()
+            app.sidebar.navigate_to("reports")
+            app.update()
+            reports_view = app.views["reports"]
+
+            for bad_id in ("EMP999", "NOTREAL"):
+                reports_view.history_search_entry.delete(0, "end")
+                reports_view.history_search_entry.insert(0, bad_id)
+                reports_view._search_employee_history()  # must not raise
+                app.update()
+                self.assertIn(
+                    "No attendance records found.", reports_view.history_summary_label.cget("text")
+                )
+
+            # A whitespace-only / empty term should clear the display rather
+            # than claim "no records found" - there was no search to run.
+            reports_view.history_search_entry.delete(0, "end")
+            reports_view.history_search_entry.insert(0, "   ")
+            reports_view._search_employee_history()  # must not raise
+            app.update()
+            self.assertEqual(reports_view.history_summary_label.cget("text"), "")
+        finally:
+            app._on_close()
+
+    def test_employee_history_search_multiple_valid_ids_sequentially(self) -> None:
+        from gui.dashboard import DashboardApp
+
+        app = DashboardApp(
+            auth=self.auth, db=self.db, employee_manager=self.emp_mgr,
+            attendance_manager=self.att_mgr, encoding_cache=self.encoding_cache,
+        )
+        try:
+            app.update()
+            for eid, name in [("EMP410", "Person A"), ("EMP411", "Person B"), ("EMP412", "Person C")]:
+                app.emp_mgr.register_employee(
+                    employee_id=eid, name=name, department="Ops", designation="Tech",
+                    mobile="9998887777", email=f"{eid.lower()}@example.com",
+                )
+                app.att_mgr.process_recognition(eid)
+
+            app.sidebar.navigate_to("reports")
+            app.update()
+            reports_view = app.views["reports"]
+
+            for eid, name in [("EMP410", "Person A"), ("EMP411", "Person B"), ("EMP412", "Person C")]:
+                reports_view.history_search_entry.delete(0, "end")
+                reports_view.history_search_entry.insert(0, eid)
+                reports_view._search_employee_history()
+                app.update()
+                self.assertIn(name, reports_view.history_summary_label.cget("text"))
+
+            # Existing table/filters/export in the same view must still work
+            # after multiple history searches (requirement: don't break
+            # existing functionality).
+            reports_view._load_range("today")
+            app.update()
+            self.assertGreaterEqual(len(reports_view._current_rows), 3)
+        finally:
+            app._on_close()
+
     def test_camera_unavailable_generates_notification(self) -> None:
         from gui.dashboard import DashboardApp
 
@@ -260,11 +441,128 @@ class TestGuiDashboard(unittest.TestCase):
             register_view.entries["designation"].insert(0, "Rep")
             register_view.entries["mobile"].insert(0, "9990003333")
             register_view.entries["email"].insert(0, "notify@example.com")
-            register_view._handle_submit()
+            register_view._handle_capture_face()
             app.update()
 
             recent = app.notification_mgr.recent()
             self.assertTrue(any("Notify Target" in e.message for e in recent))
+        finally:
+            app._on_close()
+
+    def test_capture_face_success_enables_save_and_save_finalizes(self) -> None:
+        """Mocks FaceCaptureDialog (the only camera-hardware boundary)
+        to simulate a successful capture, then verifies RegisterView's
+        OWN state machine: Save stays disabled until capture succeeds,
+        becomes enabled after, and clicking it clears the form without
+        re-registering (which would raise DuplicateEmployeeError).
+        """
+        from gui.dashboard import DashboardApp
+        from unittest.mock import patch
+
+        app = DashboardApp(
+            auth=self.auth, db=self.db, employee_manager=self.emp_mgr,
+            attendance_manager=self.att_mgr, encoding_cache=self.encoding_cache,
+        )
+        try:
+            app.update()
+            register_view = app.views["register"]
+
+            register_view.entries["employee_id"].insert(0, "EMP501")
+            register_view.entries["name"].insert(0, "Capture Success")
+            register_view.entries["department"].insert(0, "Ops")
+            register_view.entries["designation"].insert(0, "Tech")
+            register_view.entries["mobile"].insert(0, "9991112222")
+            register_view.entries["email"].insert(0, "capture@example.com")
+
+            def fake_dialog(master, employee_id, on_complete, on_cancel=None):
+                on_complete(18)  # simulate a successful 18-image capture
+                return None
+
+            with patch("gui.views.register_view.FaceCaptureDialog", side_effect=fake_dialog):
+                register_view._handle_capture_face()
+            app.update()
+
+            self.assertEqual(register_view.submit_btn.cget("state"), "normal")
+            self.assertIn("✓", register_view.face_status_label.cget("text"))
+
+            register_view._handle_submit()
+            app.update()
+
+            self.assertEqual(register_view.entries["employee_id"].get(), "")  # form cleared
+            self.assertEqual(register_view.submit_btn.cget("state"), "disabled")  # reset for next entry
+            self.assertIsNotNone(app.emp_mgr.get_employee("EMP501"))  # not duplicated/removed
+        finally:
+            app._on_close()
+
+    def test_editing_employee_id_after_capture_resets_gate(self) -> None:
+        from gui.dashboard import DashboardApp
+        from unittest.mock import patch
+
+        app = DashboardApp(
+            auth=self.auth, db=self.db, employee_manager=self.emp_mgr,
+            attendance_manager=self.att_mgr, encoding_cache=self.encoding_cache,
+        )
+        try:
+            app.update()
+            register_view = app.views["register"]
+
+            register_view.entries["employee_id"].insert(0, "EMP502")
+            register_view.entries["name"].insert(0, "Reset Target")
+            register_view.entries["department"].insert(0, "Ops")
+            register_view.entries["designation"].insert(0, "Tech")
+            register_view.entries["mobile"].insert(0, "9991113333")
+            register_view.entries["email"].insert(0, "reset@example.com")
+
+            def fake_dialog(master, employee_id, on_complete, on_cancel=None):
+                on_complete(18)
+                return None
+
+            with patch("gui.views.register_view.FaceCaptureDialog", side_effect=fake_dialog):
+                register_view._handle_capture_face()
+            app.update()
+            self.assertEqual(register_view.submit_btn.cget("state"), "normal")
+
+            register_view.entries["employee_id"].insert("end", "X")
+            register_view._on_employee_id_changed()
+            app.update()
+
+            self.assertEqual(register_view.submit_btn.cget("state"), "disabled")
+            self.assertIn("not registered", register_view.face_status_label.cget("text"))
+        finally:
+            app._on_close()
+
+    def test_capture_face_cancelled_leaves_save_disabled(self) -> None:
+        from gui.dashboard import DashboardApp
+        from unittest.mock import patch
+
+        app = DashboardApp(
+            auth=self.auth, db=self.db, employee_manager=self.emp_mgr,
+            attendance_manager=self.att_mgr, encoding_cache=self.encoding_cache,
+        )
+        try:
+            app.update()
+            register_view = app.views["register"]
+
+            register_view.entries["employee_id"].insert(0, "EMP503")
+            register_view.entries["name"].insert(0, "Cancel Target")
+            register_view.entries["department"].insert(0, "Ops")
+            register_view.entries["designation"].insert(0, "Tech")
+            register_view.entries["mobile"].insert(0, "9991114444")
+            register_view.entries["email"].insert(0, "cancel@example.com")
+
+            def fake_dialog(master, employee_id, on_complete, on_cancel=None):
+                on_cancel()  # simulate the admin cancelling the capture
+                return None
+
+            with patch("gui.views.register_view.FaceCaptureDialog", side_effect=fake_dialog):
+                register_view._handle_capture_face()
+            app.update()
+
+            self.assertEqual(register_view.submit_btn.cget("state"), "disabled")
+            self.assertIn("cancelled", register_view.face_status_label.cget("text"))
+            # Metadata was still saved even though capture was cancelled -
+            # admin can retry Capture Face for the same ID without re-typing.
+            self.assertIsNotNone(app.emp_mgr.get_employee("EMP503"))
         finally:
             app._on_close()
 
